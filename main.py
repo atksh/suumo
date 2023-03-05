@@ -78,7 +78,8 @@ def extract_listing(theads, listing):
 
 def do(page: int):
     assert 1 <= page and isinstance(page, int)
-    res = request_get(URL.format(page))
+    page_url = URL.format(page)
+    res = request_get(page_url)
     soup = BeautifulSoup(res.content, "html.parser")
 
     dfs = []
