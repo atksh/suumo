@@ -1,7 +1,6 @@
 import os
+import random
 import shutil
-import time
-import traceback
 import unicodedata
 from concurrent.futures import ThreadPoolExecutor as TPE
 from concurrent.futures import as_completed
@@ -10,20 +9,54 @@ from itertools import count
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
+from requests.adapters import HTTPAdapter
 from retry import retry
+from urllib3.util.retry import Retry
 
 from cache_to_disk import cache_to_disk
+from proxy import get_proxy_urls
 from settings import *
 
-so = requests.Session()
-so.headers.update({"User-Agent": USER_AGENT})
+
+@cache_to_disk(1)
+def proxies():
+    return get_proxy_urls()
+
+
+def session() -> requests.Session:
+    session = requests.Session()
+    retries = Retry(total=3, backoff_factor=5, status_forcelist=[500, 502, 503, 504])
+    session.mount("https://", HTTPAdapter(max_retries=retries))
+    session.mount("http://", HTTPAdapter(max_retries=retries))
+    session.headers.update({"User-Agent": USER_AGENT})
+    return session
+
+
+so = session()
 
 
 @cache_to_disk(DAYS_TO_CACHE)
-@retry(tries=3, delay=1.5)
+@retry(tries=3, backoff=2)
 def request_get(url):
-    global so
-    return so.get(url)
+    def get(url, proxy_url=None):
+        return so.get(
+            url,
+            timeout=(5, 10),
+            proxies={scheme: f"http://{proxy_url}" for scheme in ("http", "https")}
+            if proxy_url
+            else None,
+        )
+
+    res = get(url)
+    if res.ok:
+        return res
+    else:
+        sampled_proxies = random.sample(proxies(), 5)
+        for proxy_url in sampled_proxies:
+            res = get(url, proxy_url)
+            if res.ok:
+                return res
+    raise Exception(f"Failed to get {url}")
 
 
 def pretty_text(s: str) -> str:
@@ -42,11 +75,14 @@ def get_options(soup):
     return details
 
 
-@retry(tries=3)
 def get_details(url):
     res = request_get(url)
     soup = BeautifulSoup(res.content, "html.parser")
-    options = get_options(soup)
+    try:
+        options = get_options(soup)
+    except IndexError:
+        print(url)
+        raise IndexError
 
     data = {"options": options}
     table = soup.find("table", class_="table_gaiyou")
@@ -57,7 +93,6 @@ def get_details(url):
     return data
 
 
-@retry(tries=3)
 def extract_listing(theads, listing):
     href = (
         listing.find("td", class_="ui-text--midium ui-text--bold").find("a").get("href")
