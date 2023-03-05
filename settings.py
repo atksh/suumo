@@ -1,6 +1,5 @@
 import json
 
-ignore_rows = {"お気に入り"}
 URL = (
     "https://suumo.jp/jj/chintai/"
     "ichiran/FR301FC001/"

@@ -1,6 +1,7 @@
 import os
 import shutil
 import time
+import traceback
 import unicodedata
 from concurrent.futures import ThreadPoolExecutor as TPE
 from concurrent.futures import as_completed
@@ -21,10 +22,11 @@ so.headers.update({"User-Agent": USER_AGENT})
 @cache_to_disk(DAYS_TO_CACHE)
 def request_get(url):
     res = ""
-    for i in range(5):
+    for i in range(3):
         try:
             res = so.get(url)
         except:
+            traceback.print_exc()
             time.sleep(1.5**i)
         else:
             break
@@ -69,11 +71,15 @@ def extract_listing(theads, listing):
 
     row = {}
     tds = list(map(lambda x: pretty_text(x), listing.find_all("td")))
+    print(tds)
     for a, b in zip(theads, tds):
-        if a and b and a not in ignore_rows:
-            row[a] = b
-    additional = get_details(url)
-    row.update(additional)
+        row[a] = b
+    try:
+        additional = get_details(url)
+    except:
+        pass
+    else:
+        row.update(additional)
     row = pd.DataFrame.from_dict(row, orient="index").T
     row["url"] = url
     return row
@@ -86,7 +92,7 @@ def do(page: int):
     soup = BeautifulSoup(res.content, "html.parser")
 
     dfs = []
-    for article in tqdm(list(soup.find_all("div", class_="cassetteitem"))):
+    for article in soup.find_all("div", class_="cassetteitem"):
         # bldg
         datum = {"page": page}
         for key, value in bldg_config.items():
@@ -104,8 +110,9 @@ def do(page: int):
                 futures.append(future)
             for future in as_completed(futures):
                 row = future.result()
-                row = pd.concat([df, row], axis=1)
-                dfs.append(row)
+                if len(row) > 0:
+                    row = pd.concat([df, row], axis=1)
+                    dfs.append(row)
 
     df = pd.concat(dfs, axis=0).reset_index(drop=True)
     return df
@@ -114,13 +121,15 @@ def do(page: int):
 def main():
     shutil.rmtree("data", ignore_errors=True)
     os.mkdir("data")
+    failed_count = 0
     for page in count(start=1):
+        print("=== Page {} ===".format(page))
         df = []
-        for _ in range(5):
+        for _ in range(3):
             try:
                 df = do(page)
-            except Exception as e:
-                print(e)
+            except:
+                traceback.print_exc()
             else:
                 if len(df) == 0:
                     print("No data found. Exiting...")
@@ -128,8 +137,11 @@ def main():
                 else:
                     break
         if len(df) == 0:
+            failed_count += 1
             break
         df.to_csv(f"data/{page}.csv")
+        if failed_count >= 10:
+            return
 
 
 if __name__ == "__main__":
