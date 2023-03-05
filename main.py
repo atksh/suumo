@@ -3,9 +3,9 @@ import unicodedata
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
-from cache_to_disk import cache_to_disk
 from tqdm import tqdm
 
+from cache_to_disk import cache_to_disk
 from settings import *
 
 so = requests.Session()
