@@ -1,17 +1,17 @@
 import unicodedata
-from tqdm import tqdm
 
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 from cache_to_disk import cache_to_disk
+from tqdm import tqdm
 
 from settings import *
 
 so = requests.Session()
 
 
-@cache_to_disk(3)
+@cache_to_disk(DAYS_TO_CACHE)
 def request_get(url):
     global so
     return so.get(url)
@@ -45,10 +45,10 @@ def get_details(url):
             th, td = map(pretty_text, [th, td])
             data[th] = td
     return data
-    
 
 
-def main():
+def do(page: int):
+    assert 1 <= page and isinstance(page, int)
     res = request_get(URL)
     soup = BeautifulSoup(res.content, "html.parser")
 
@@ -85,7 +85,16 @@ def main():
             dfs.append(row)
 
     df = pd.concat(dfs, axis=0).reset_index(drop=True)
-    df.to_csv("data.csv", index=False)
+    return df
+
+
+def main():
+    dfs = []
+    for page in range(1, 206):
+        df = do(page)
+        df["page"] = page
+        dfs.append(df)
+        pd.concat(dfs, axis=0).to_csv("data.csv", index=False)
 
 
 if __name__ == "__main__":
