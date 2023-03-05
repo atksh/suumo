@@ -1,4 +1,5 @@
 import os
+import json
 import random
 import shutil
 import unicodedata
@@ -84,7 +85,7 @@ def get_details(url):
         print(url)
         raise IndexError
 
-    data = {"options": options}
+    data = {"options": json.dumps(options)}
     table = soup.find("table", class_="table_gaiyou")
     for tr in table.find_all("tr"):
         for th, td in zip(tr.find_all("th"), tr.find_all("td")):
