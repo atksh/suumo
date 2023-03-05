@@ -94,7 +94,7 @@ def do(page: int):
         table = article.find("table", class_="cassetteitem_other")
         theads = list(map(lambda x: pretty_text(x), table.find_all("th")))
         listings = table.find_all("tbody")
-        with TPE(max_workers=32) as executor:
+        with TPE(max_workers=50) as executor:
             futures = []
             for listing in listings:
                 future = executor.submit(extract_listing, theads, listing)
