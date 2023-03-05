@@ -55,7 +55,7 @@ def do(page: int):
     dfs = []
     for article in tqdm(list(soup.find_all("div", class_="cassetteitem"))):
         # bldg
-        datum = {}
+        datum = {"page": page}
         for key, value in bldg_config.items():
             datum[key] = article.find(value["tag"], class_=value["class"])
             datum[key] = pretty_text(datum[key])
@@ -92,7 +92,6 @@ def main():
     dfs = []
     for page in range(1, 206):
         df = do(page)
-        df["page"] = page
         dfs.append(df)
         pd.concat(dfs, axis=0).to_csv("data.csv", index=False)
 
