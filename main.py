@@ -80,13 +80,14 @@ def get_options(soup):
 def get_details(url):
     res = request_get(url)
     soup = BeautifulSoup(res.content, "html.parser")
+    data = {"options": ""}
     try:
         options = get_options(soup)
     except IndexError:
         print(url)
-        data = {}
     else:
-        data = {"options": json.dumps(options)}
+        data["options"] = json.dumps(options)
+
     table = soup.find("table", class_="table_gaiyou")
     for tr in table.find_all("tr"):
         for th, td in zip(tr.find_all("th"), tr.find_all("td")):
