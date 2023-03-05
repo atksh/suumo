@@ -1,0 +1,18 @@
+{
+    "title": {
+        "tag": "div",
+        "class": "cassetteitem_content-title"
+    },
+    "address": {
+        "tag": "li",
+        "class": "cassetteitem_detail-col1"
+    },
+    "stations": {
+        "tag": "li",
+        "class": "cassetteitem_detail-col2"
+    },
+    "age": {
+        "tag": "li",
+        "class": "cassetteitem_detail-col3"
+    }
+}
