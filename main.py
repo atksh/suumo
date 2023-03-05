@@ -9,6 +9,7 @@ from tqdm import tqdm
 from settings import *
 
 so = requests.Session()
+so.headers.update({"User-Agent": USER_AGENT})
 
 
 @cache_to_disk(DAYS_TO_CACHE)
@@ -49,7 +50,7 @@ def get_details(url):
 
 def do(page: int):
     assert 1 <= page and isinstance(page, int)
-    res = request_get(URL)
+    res = request_get(URL.format(page))
     soup = BeautifulSoup(res.content, "html.parser")
 
     dfs = []
