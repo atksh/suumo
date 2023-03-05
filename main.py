@@ -71,7 +71,6 @@ def extract_listing(theads, listing):
 
     row = {}
     tds = list(map(lambda x: pretty_text(x), listing.find_all("td")))
-    print(tds)
     for a, b in zip(theads, tds):
         row[a] = b
     try:
