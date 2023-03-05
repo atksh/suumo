@@ -71,8 +71,8 @@ def extract_listing(theads, listing):
             row[a] = b
     additional = get_details(url)
     row.update(additional)
-    row["url"] = url
     row = pd.DataFrame.from_dict(row, orient="index").T
+    row["url"] = url
     return row
 
 
