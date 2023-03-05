@@ -5,6 +5,7 @@ import shutil
 import unicodedata
 from concurrent.futures import ThreadPoolExecutor as TPE
 from concurrent.futures import as_completed
+from functools import lru_cache
 from itertools import count
 
 import pandas as pd
@@ -19,7 +20,7 @@ from proxy import get_proxy_urls
 from settings import *
 
 
-@cache_to_disk(1)
+@lru_cache(maxsize=1)
 def proxies():
     return get_proxy_urls()
 
@@ -52,7 +53,7 @@ def request_get(url):
     if res.ok:
         return res
     else:
-        sampled_proxies = random.sample(proxies(), 5)
+        sampled_proxies = random.sample(proxies(), 50, replace=True)
         for proxy_url in sampled_proxies:
             res = get(url, proxy_url)
             if res.ok:
