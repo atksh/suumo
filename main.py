@@ -1,7 +1,10 @@
+import os
+import shutil
 import time
 import unicodedata
 from concurrent.futures import ThreadPoolExecutor as TPE
 from concurrent.futures import as_completed
+from itertools import count
 
 import pandas as pd
 import requests
@@ -109,15 +112,21 @@ def do(page: int):
 
 
 def main():
-    gf = None
-    dfs = []
-    for page in range(1, 206):
-        df = do(page)
-        dfs.append(df)
-        gf = pd.concat(dfs, axis=0)
-        gf = gf.drop_duplicates(subset=["title", "url"]).reset_index(drop=True)
-        gf.to_csv("data.csv", index=False)
-    gf.to_csv("data.csv", index=False)
+    shutil.rmtree("data", ignore_errors=True)
+    os.mkdir("data")
+    for page in count(start=1):
+        df = []
+        for _ in range(5):
+            try:
+                df = do(page)
+            except:
+                continue
+            else:
+                if len(df) == 0:
+                    continue
+        if len(df) == 0:
+            break
+        df.to_csv(f"data/{page}.csv")
 
 
 if __name__ == "__main__":
