@@ -119,11 +119,14 @@ def main():
         for _ in range(5):
             try:
                 df = do(page)
-            except:
-                continue
+            except Exception as e:
+                print(e)
             else:
                 if len(df) == 0:
+                    print("No data found. Exiting...")
                     continue
+                else:
+                    break
         if len(df) == 0:
             break
         df.to_csv(f"data/{page}.csv")
