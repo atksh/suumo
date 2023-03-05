@@ -10,7 +10,7 @@ from itertools import count
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
-from tqdm import tqdm
+from retry import retry
 
 from cache_to_disk import cache_to_disk
 from settings import *
@@ -20,18 +20,10 @@ so.headers.update({"User-Agent": USER_AGENT})
 
 
 @cache_to_disk(DAYS_TO_CACHE)
+@retry(tries=3, delay=1.5)
 def request_get(url):
-    res = None
-    for i in range(3):
-        try:
-            res = so.get(url)
-        except:
-            traceback.print_exc()
-            time.sleep(1.5**i)
-        else:
-            break
-    assert res is not None
-    return res
+    global so
+    return so.get(url)
 
 
 def pretty_text(s: str) -> str:
@@ -50,6 +42,7 @@ def get_options(soup):
     return details
 
 
+@retry(tries=3)
 def get_details(url):
     res = request_get(url)
     soup = BeautifulSoup(res.content, "html.parser")
@@ -64,6 +57,7 @@ def get_details(url):
     return data
 
 
+@retry(tries=3)
 def extract_listing(theads, listing):
     href = (
         listing.find("td", class_="ui-text--midium ui-text--bold").find("a").get("href")
@@ -74,17 +68,14 @@ def extract_listing(theads, listing):
     tds = list(map(lambda x: pretty_text(x), listing.find_all("td")))
     for a, b in zip(theads, tds):
         row[a] = b
-    try:
-        additional = get_details(url)
-    except:
-        pass
-    else:
-        row.update(additional)
+    additional = get_details(url)
+    row.update(additional)
     row = pd.DataFrame.from_dict(row, orient="index").T
     row["url"] = url
     return row
 
 
+@retry(tries=3)
 def do(page: int):
     assert 1 <= page and isinstance(page, int)
     page_url = URL.format(page)
@@ -128,18 +119,7 @@ def main():
     failed_count = 0
     for page in count(start=1):
         print("=== Page {} ===".format(page))
-        df = []
-        for _ in range(3):
-            try:
-                df = do(page)
-            except:
-                traceback.print_exc()
-            else:
-                if len(df) == 0:
-                    print("No data found. Exiting...")
-                    continue
-                else:
-                    break
+        df = do(page)
         if len(df) == 0:
             failed_count += 1
             break
