@@ -162,5 +162,4 @@ cython_debug/
 
 *.csv
 
-disk_cache/
 data/

@@ -15,7 +15,6 @@ from requests.adapters import HTTPAdapter
 from retry import retry
 from urllib3.util.retry import Retry
 
-from cache_to_disk import cache_to_disk
 from proxy import get_proxy_urls
 from settings import *
 
@@ -37,8 +36,7 @@ def session() -> requests.Session:
 so = session()
 
 
-@cache_to_disk(DAYS_TO_CACHE)
-@retry(tries=3, backoff=2)
+@retry(tries=5, backoff=2)
 def request_get(url):
     def get(url, proxy_url=None):
         return so.get(
@@ -89,10 +87,11 @@ def get_details(url):
         data["options"] = json.dumps(options)
 
     table = soup.find("table", class_="table_gaiyou")
-    for tr in table.find_all("tr"):
-        for th, td in zip(tr.find_all("th"), tr.find_all("td")):
-            th, td = map(pretty_text, [th, td])
-            data[th] = td
+    if table:
+        for tr in table.find_all("tr"):
+            for th, td in zip(tr.find_all("th"), tr.find_all("td")):
+                th, td = map(pretty_text, [th, td])
+                data[th] = td
     return data
 
 
@@ -160,7 +159,7 @@ def main():
         df = do(page)
         if len(df) == 0:
             failed_count += 1
-            break
+            continue
         df.to_csv(f"data/{page}.csv")
         if failed_count >= 10:
             return
