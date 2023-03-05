@@ -26,7 +26,54 @@ def proxies():
 
 def session() -> requests.Session:
     session = requests.Session()
-    retries = Retry(total=3, backoff_factor=5, status_forcelist=[500, 502, 503, 504])
+    retries = Retry(
+        total=3,
+        backoff_factor=5,
+        status_forcelist=[
+            500,
+            502,
+            503,
+            504,
+            404,
+            403,
+            429,
+            408,
+            407,
+            405,
+            400,
+            401,
+            402,
+            406,
+            413,
+            414,
+            415,
+            416,
+            417,
+            418,
+            421,
+            422,
+            423,
+            424,
+            425,
+            426,
+            428,
+            429,
+            431,
+            451,
+            500,
+            501,
+            502,
+            503,
+            504,
+            505,
+            506,
+            507,
+            508,
+            510,
+            511,
+            599,
+        ],
+    )
     session.mount("https://", HTTPAdapter(max_retries=retries))
     session.mount("http://", HTTPAdapter(max_retries=retries))
     session.headers.update({"User-Agent": USER_AGENT})
@@ -131,16 +178,11 @@ def do(page: int):
         table = article.find("table", class_="cassetteitem_other")
         theads = list(map(lambda x: pretty_text(x), table.find_all("th")))
         listings = table.find_all("tbody")
-        with TPE(max_workers=50) as executor:
-            futures = []
-            for listing in listings:
-                future = executor.submit(extract_listing, theads, listing)
-                futures.append(future)
-            for future in as_completed(futures):
-                row = future.result()
-                if len(row) > 0:
-                    row = pd.concat([df, row], axis=1)
-                    dfs.append(row)
+        for listing in listings:
+            row = extract_listing(theads, listing)
+            if len(row) > 0:
+                row = pd.concat([df, row], axis=1)
+                dfs.append(row)
 
     if len(dfs) > 0:
         df = pd.concat(dfs, axis=0).reset_index(drop=True)
