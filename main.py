@@ -21,7 +21,7 @@ so.headers.update({"User-Agent": USER_AGENT})
 
 @cache_to_disk(DAYS_TO_CACHE)
 def request_get(url):
-    res = ""
+    res = None
     for i in range(3):
         try:
             res = so.get(url)
@@ -30,6 +30,7 @@ def request_get(url):
             time.sleep(1.5**i)
         else:
             break
+    assert res is not None
     return res
 
 
@@ -113,8 +114,12 @@ def do(page: int):
                     row = pd.concat([df, row], axis=1)
                     dfs.append(row)
 
-    df = pd.concat(dfs, axis=0).reset_index(drop=True)
-    return df
+    if len(dfs) > 0:
+        df = pd.concat(dfs, axis=0).reset_index(drop=True)
+        return df
+    else:
+        print("No data found. Exiting...")
+        return []
 
 
 def main():

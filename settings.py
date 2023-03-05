@@ -8,7 +8,7 @@ URL = (
     "&shkr1=03&shkr2=03&shkr3=03&shkr4=03&fw2="
     "&ek=000520110&ek=000519120&ek=000506000&ek=000520550"
     "&ek=000515330&ek=000523410&ek=000529160&rn=0005&srch_navi=1"
-    "&page={}"
+    "&pc=50&page={}"
 )
 DAYS_TO_CACHE = 3
 USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
