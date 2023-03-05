@@ -1,4 +1,7 @@
+import time
 import unicodedata
+from concurrent.futures import ThreadPoolExecutor as TPE
+from concurrent.futures import as_completed
 
 import pandas as pd
 import requests
@@ -14,8 +17,15 @@ so.headers.update({"User-Agent": USER_AGENT})
 
 @cache_to_disk(DAYS_TO_CACHE)
 def request_get(url):
-    global so
-    return so.get(url)
+    res = ""
+    for i in range(5):
+        try:
+            res = so.get(url)
+        except:
+            time.sleep(1.5**i)
+        else:
+            break
+    return res
 
 
 def pretty_text(s: str) -> str:
@@ -48,6 +58,24 @@ def get_details(url):
     return data
 
 
+def extract_listing(theads, listing):
+    href = (
+        listing.find("td", class_="ui-text--midium ui-text--bold").find("a").get("href")
+    )
+    url = f"https://suumo.jp{href}"
+
+    row = {}
+    tds = list(map(lambda x: pretty_text(x), listing.find_all("td")))
+    for a, b in zip(theads, tds):
+        if a and b and a not in ignore_rows:
+            row[a] = b
+    additional = get_details(url)
+    row.update(additional)
+    row["url"] = url
+    row = pd.DataFrame.from_dict(row, orient="index").T
+    return row
+
+
 def do(page: int):
     assert 1 <= page and isinstance(page, int)
     res = request_get(URL.format(page))
@@ -65,36 +93,30 @@ def do(page: int):
         table = article.find("table", class_="cassetteitem_other")
         theads = list(map(lambda x: pretty_text(x), table.find_all("th")))
         listings = table.find_all("tbody")
-        for listing in listings:
-            href = (
-                listing.find("td", class_="ui-text--midium ui-text--bold")
-                .find("a")
-                .get("href")
-            )
-            url = f"https://suumo.jp{href}"
-
-            row = {}
-            tds = list(map(lambda x: pretty_text(x), listing.find_all("td")))
-            for a, b in zip(theads, tds):
-                if a and b and a not in ignore_rows:
-                    row[a] = b
-            additional = get_details(url)
-            row.update(additional)
-            row["url"] = url
-            row = pd.DataFrame.from_dict(row, orient="index").T
-            row = pd.concat([df, row], axis=1)
-            dfs.append(row)
+        with TPE(max_workers=32) as executor:
+            futures = []
+            for listing in listings:
+                future = executor.submit(extract_listing, theads, listing)
+                futures.append(future)
+            for future in as_completed(futures):
+                row = future.result()
+                row = pd.concat([df, row], axis=1)
+                dfs.append(row)
 
     df = pd.concat(dfs, axis=0).reset_index(drop=True)
     return df
 
 
 def main():
+    gf = None
     dfs = []
     for page in range(1, 206):
         df = do(page)
         dfs.append(df)
-        pd.concat(dfs, axis=0).to_csv("data.csv", index=False)
+        gf = pd.concat(dfs, axis=0)
+        gf = gf.drop_duplicates(subset=["title", "url"]).reset_index(drop=True)
+        gf.to_csv("data.csv", index=False)
+    gf.to_csv("data.csv", index=False)
 
 
 if __name__ == "__main__":
